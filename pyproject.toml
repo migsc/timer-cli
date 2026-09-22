@@ -1,15 +1,19 @@
 [tool.poetry]
 name = "timer-cli"
-version = "0.1.2"
+version = "0.1.2+alarm.1"
 description = "A simple CLI tool for starting a countdown timer."
 license = "Apache-2.0"
 authors = ["Kush Makkapati <kush.makkapati@icloud.com>"]
 readme = "README.md"
-repository = "https://github.com/1Blademaster/timer-cli"
+repository = "https://github.com/migsc/timer-cli"
 packages = [{include = "timer"}]
+include = [
+    {path = "timer/sounds/*", format = ["sdist", "wheel"]},
+    {path = "scripts/generate_alarm.py", format = "sdist"},
+]
 
 [tool.poetry.dependencies]
-python = "^3.7"
+python = "^3.10"
 rich = "^13.3.2"
 art = "^5.9"
 click = "^8.1.3"

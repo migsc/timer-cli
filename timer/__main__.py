@@ -1,4 +1,5 @@
 # -*- coding: utf-8 -*-
+# Modified in the migsc fork to add optional macOS alarm playback.
 
 import os
 import math
@@ -18,6 +19,7 @@ from rich.live import Live
 from rich.panel import Panel
 from rich.text import Text
 from rich.measure import Measurement
+from timer.alarm import Alarm, AlarmError
 
 DEFAULT_FONT: str = os.environ.get("TIMER_FONT", "c1")
 TEXT_COLOUR_HIGH_PERCENT: str = "green"
@@ -121,6 +123,12 @@ def parseDurationString(
     help="Do not ring the terminal bell once the timer is over",
 )
 @click.option(
+    "--alarm",
+    default=False,
+    is_flag=True,
+    help="Play the bundled alarm every 10 seconds once the timer is over (macOS only)",
+)
+@click.option(
     "--font",
     type=str,
     default=DEFAULT_FONT,
@@ -132,7 +140,7 @@ def parseDurationString(
     is_flag=True,
     help="List available fonts and exit",
 )
-def main(duration: Optional[str], no_bell: bool, message: str, font: str, list_fonts: bool) -> None:
+def main(duration: Optional[str], no_bell: bool, message: str, font: str, list_fonts: bool, alarm: bool) -> None:
     """
     \b
     DURATION is the duration of your timer. It can be either:
@@ -224,6 +232,11 @@ def main(duration: Optional[str], no_bell: bool, message: str, font: str, list_f
         console.print(f"[red]The timer duration cannot be zero.[/red]")
         sys.exit(1)
 
+    try:
+        alarm_player = Alarm() if alarm else None
+    except AlarmError as exc:
+        raise click.ClickException(str(exc)) from exc
+
     countdown_time_string = createTimeString(hours, minutes, seconds - 1)
     countdown_time_text = Text(
         text2art(countdown_time_string, font=font).rstrip("\n"), style=TEXT_COLOUR_HIGH_PERCENT
@@ -298,6 +311,8 @@ def main(duration: Optional[str], no_bell: bool, message: str, font: str, list_f
             while True:
                 if not no_bell:
                     console.bell()
+                if alarm_player is not None:
+                    alarm_player.play()
 
                 timer_over_text = Text(text2art("00:00:00", font=font), style="blink")
                 message_text = Text(message, style="white")
@@ -315,9 +330,14 @@ def main(duration: Optional[str], no_bell: bool, message: str, font: str, list_f
                 )
                 screen.update(Panel(display))
                 time.sleep(10)
+    except AlarmError as exc:
+        raise click.ClickException(str(exc)) from exc
     except KeyboardInterrupt:
         console.print("[red]Quitting...[/red]")
         sys.exit()
+    finally:
+        if alarm_player is not None:
+            alarm_player.stop()
 
 
 if __name__ == "__main__":
